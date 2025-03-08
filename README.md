@@ -1,6 +1,6 @@
 ## Quick start
 
-(1) Data preparation for Chemistry QA.
+(1) Data preparation for Chemistry QA separately.
 ```bash
 #!/bin/bash
 
@@ -22,4 +22,15 @@ for script in "${scripts[@]}"; do
     fi
     echo "$script completed successfully."
 done
+```
+
+(2) Or, prepare data altogether:
+```bash
+python scripts/construct_train_test_chem.py
+```
+
+Currently, the processed data is stored in local dir:
+```bash
+/shared/data3/siruo2/ChemR1/data/train.parquet
+/shared/data3/siruo2/ChemR1/data/test.parquet
 ```
