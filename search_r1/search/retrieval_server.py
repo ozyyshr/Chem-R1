@@ -327,7 +327,7 @@ app = FastAPI()
 # 1) Build a config (could also parse from arguments).
 #    In real usage, you'd parse your CLI arguments or environment variables.
 config = Config(
-    retrieval_method = "e5",  # or "dense"
+    retrieval_method = "bm25",  # or "dense"
     index_path=args.index_path,
     corpus_path=args.corpus_path,
     retrieval_topk=args.topk,
@@ -378,5 +378,5 @@ def retrieve_endpoint(request: QueryRequest):
 
 
 if __name__ == "__main__":
-    # 3) Launch the server. By default, it listens on http://127.0.0.1:8000
+    # 3) Launch the server. By default, it listens on http://127.0.0.1:8000/retrieve
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -495,7 +495,8 @@ class RayPPOTrainer(object):
                 reward_tensor_lst.append(reward_tensor)
                 data_source_lst.append(test_batch.non_tensor_batch.get('data_source', ['unknown'] * reward_tensor.shape[0]))
         else:
-            for batch_dict in self.val_dataloader:
+            from tqdm import tqdm
+            for batch_dict in tqdm(self.val_dataloader, desc="Validating"):
                 timing_raw = {}
                 test_batch: DataProto = DataProto.from_single_dict(batch_dict)
                 # test_batch = test_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n_agent, interleave=True)
@@ -524,11 +525,11 @@ class RayPPOTrainer(object):
                     
                     # evaluate using reward_function
                     # for certain reward function (e.g. sandbox), the generation can overlap with reward
-                    try:
-                        reward_tensor = self.val_reward_fn(test_batch)
-                    except:
-                        print(test_batch)
-                        exit()
+                    # try:
+                    reward_tensor = self.val_reward_fn(test_batch)
+                    # except:
+                    #     print(test_batch)
+                    #     exit()
 
                     reward_tensor_lst.append(reward_tensor)
                     data_source_lst.append(test_batch.non_tensor_batch.get('data_source', ['unknown'] * reward_tensor.shape[0]))

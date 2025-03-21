@@ -17,16 +17,38 @@ Note that we don't combine the main with ray_trainer as ray_trainer is used by o
 
 from verl import DataProto
 import torch
+import json
 from verl.utils.reward_score import qa_em
 from verl.trainer.ppo.ray_trainer import RayPPOTrainer
 import re
 import numpy as np
 
 def _select_rm_score_fn(data_source):
-    if "nq" in data_source:
-        return qa_em.compute_score_em
-    else:
-        raise NotImplementedError
+    # if "nq" in data_source:
+    return qa_em.compute_score_em
+    # else:
+    #     raise NotImplementedError
+
+
+import ast
+
+def safe_json_loads(s):
+    """
+    Attempts to safely parse a JSON-like string, including those using single quotes
+    and containing complex nested quotes in string values.
+    Falls back to ast.literal_eval when appropriate.
+    """
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError:
+        try:
+            # Try evaluating as Python literal (handles single quotes, nested quotes, etc.)
+            return ast.literal_eval(s)
+        except Exception as e:
+            print("Failed to parse input:", e)
+            raise ValueError("Invalid JSON or Python-literal-like string") from e
+
+
 
 
 class RewardManager():
@@ -69,7 +91,15 @@ class RewardManager():
             sequences = torch.cat((valid_prompt_ids, valid_response_ids))
             sequences_str = self.tokenizer.decode(sequences)
 
-            ground_truth = data_item.non_tensor_batch['reward_model']['ground_truth']
+            # cautious: for Chem-related tasks, convert to dict
+            ground_truth_ori = data_item.non_tensor_batch['reward_model']['ground_truth']
+            # ground_truth_ori = re.sub(r"(?<!\w)'([^']+)'(?!\w)", r'"\1"', ground_truth_ori)
+            try:
+                # ground_truth = json.loads(ground_truth_ori)
+                ground_truth = safe_json_loads(ground_truth_ori)
+            except:
+                print(f'---------------{ground_truth_ori}-----------------')
+            
 
             # select rm_score
             data_source = data_item.non_tensor_batch['data_source']

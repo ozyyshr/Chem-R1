@@ -78,7 +78,7 @@ If you find no further external knowledge needed, you can directly provide the a
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
-If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> The Reactant is CCOC(C)=O. </answer>. Question: {question}\n{choices}"""
+If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> The Reactant is CCOC(C)=O. </answer>. Question: {question} Choose from the following four options:\n{choices}"""
     elif template_type == 'mmlu_chem':
         question = dp['question']
         choices = "\n".join(dp['choices'])
@@ -86,7 +86,7 @@ If you find no further external knowledge needed, you can directly provide the a
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
-If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> +7.3 J </answer>. Question: {question}\n{choices}"""
+If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> +7.3 J </answer>. Question: {question} Choose from the following four options:\n{choices}"""
     elif template_type == 'chemcot':
         question = dp['question']
         prefix = f"""Answer the given question.\

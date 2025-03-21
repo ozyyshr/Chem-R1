@@ -1,5 +1,5 @@
 **/*.pt
-**/checkpoints
+**/verl_checkpoints
 **/wget-log
 **/_build/
 **/*.ckpt

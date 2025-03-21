@@ -108,9 +108,9 @@ class RLHFDataset(Dataset):
         prompt_key = self.prompt_key
 
         # nvm if prompt is too long
-        # self.dataframe = self.dataframe[self.dataframe.apply(lambda doc: len(
-        #     tokenizer.apply_chat_template(doc[prompt_key], add_generation_prompt=True)) <= self.max_prompt_length,
-        #                                                      axis=1)]
+        self.dataframe = self.dataframe[self.dataframe.apply(lambda doc: len(
+            tokenizer.tokenize(doc[prompt_key][0]['content'])) <= self.max_prompt_length,
+                                                             axis=1)]
 
         print(f'filter dataset len: {len(self.dataframe)}')
 

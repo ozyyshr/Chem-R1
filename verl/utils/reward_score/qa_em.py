@@ -104,7 +104,8 @@ def compute_score_em(solution_str, ground_truth, method='strict', format_score=0
     if answer is None:
         return 0
     else:
-        if em_check(answer, ground_truth['target']):
+        # cautious, for chem questions, gold_answers is a string, convert to list
+        if em_check(answer, [str(ground_truth['target']),]):
             return score
         else:
             return format_score
