@@ -1,14 +1,17 @@
 export DATA_DIR='data'
-export HF_HOME='/shared/data3/siruo2/hf_checkpoints'
-export HF_TOKEN='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'
+# export HF_HOME='/shared/data3/siruo2/hf_checkpoints'
+# export HF_TOKEN='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'
 
 WAND_PROJECT='Chem-R1'
 export HYDRA_FULL_ERROR=1
 
-export BASE_MODEL='meta-llama/Llama-3.2-3B'
-export EXPERIMENT_NAME=chem-r1-ppo-llama3.2-3b-bm25
-# export BASE_MODEL='meta-llama/Llama-3.2-3B-Instruct'
-# export EXPERIMENT_NAME=nq-search-r1-ppo-llama3.2-3b-it-em
+# export BASE_MODEL='meta-llama/Llama-3.2-3B'
+# export BASE_MODEL='Qwen/Qwen2.5-3B'
+# export EXPERIMENT_NAME=chem-r1-ppo-qwen2-3b-bm25-bleu
+# export EXPERIMENT_NAME=chem-r1-ppo-qwen2-1.5b-bm25-bleu
+# export EXPERIMENT_NAME=chem-r1-ppo-llama3.2-3b-bm25-rouge
+export BASE_MODEL='meta-llama/Llama-3.2-3B-Instruct'
+export EXPERIMENT_NAME=chem-search-r1-ppo-llama3.2-3b-it-bleu
 # export BASE_MODEL='meta-llama/Llama-3.1-8B'
 # export EXPERIMENT_NAME=nq-search-r1-ppo-llama3.1-8b-em
 # export BASE_MODEL='meta-llama/Llama-3.1-8B-Instruct'
@@ -24,7 +27,7 @@ export EXPERIMENT_NAME=chem-r1-ppo-llama3.2-3b-bm25
 # export EXPERIMENT_NAME=nq-search-r1-ppo-qwen2.5-7b-it-em
 
 # set -x
-export VLLM_ATTENTION_BACKEND=XFORMERS # vllm + qwen2-7b with flash_attn has some issues
+# export VLLM_ATTENTION_BACKEND=XFORMERS # vllm + qwen2-7b with flash_attn has some issues
 
 # max_prompt_length = (config['training']['max_start_length'] + config['training']['max_response_length'] * (config['training']['max_turns'] - 1) + config['training']['max_obs_length'] * config['training']['max_turns'])
     # data.train_files=$DATA_DIR/train.parquet \
@@ -35,9 +38,9 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     data.train_files=$DATA_DIR/train.parquet \
     data.val_files=$DATA_DIR/test.parquet \
     data.train_data_num=null \
-    data.val_data_num=600 \
-    data.train_batch_size=16 \
-    data.val_batch_size=512 \
+    data.val_data_num=3000 \
+    data.train_batch_size=32 \
+    data.val_batch_size=256 \
     data.max_prompt_length=4096 \
     data.max_response_length=500 \
     data.max_start_length=2048 \
@@ -45,10 +48,10 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     data.shuffle_train_dataloader=true \
     algorithm.adv_estimator=gae \
     actor_rollout_ref.model.path=$BASE_MODEL \
-    actor_rollout_ref.actor.optim.lr=1e-6 \
+    actor_rollout_ref.actor.optim.lr=5e-6 \
     actor_rollout_ref.model.enable_gradient_checkpointing=true \
     actor_rollout_ref.model.use_remove_padding=True \
-    actor_rollout_ref.actor.optim.lr_warmup_steps_ratio=0.95 \
+    actor_rollout_ref.actor.optim.lr_warmup_steps_ratio=0.85 \
     actor_rollout_ref.actor.ppo_mini_batch_size=256 \
     actor_rollout_ref.actor.ppo_micro_batch_size=64 \
     actor_rollout_ref.actor.fsdp_config.param_offload=true \
@@ -87,7 +90,7 @@ PYTHONUNBUFFERED=1 python3 -m verl.trainer.main_ppo \
     trainer.project_name=$WAND_PROJECT \
     trainer.experiment_name=$EXPERIMENT_NAME \
     trainer.total_epochs=15 \
-    trainer.total_training_steps=300 \
+    trainer.total_training_steps=1000 \
     trainer.default_hdfs_dir=null \
     trainer.default_local_dir=verl_checkpoints/$EXPERIMENT_NAME \
     max_turns=2 \

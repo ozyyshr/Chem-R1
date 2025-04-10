@@ -24,9 +24,11 @@ import re
 import numpy as np
 
 def _select_rm_score_fn(data_source):
-    # if "nq" in data_source:
-    return qa_em.compute_score_em
-    # else:
+    if "nq" in data_source:
+        return qa_em.compute_score_em
+    else:
+        from verl.utils.reward_score import chem
+        return chem.compute_score_bleu
     #     raise NotImplementedError
 
 
@@ -135,7 +137,7 @@ import hydra
 def main(config):
     if not ray.is_initialized():
         # this is for local ray cluster
-        ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN'}})
+        ray.init(runtime_env={'env_vars': {'TOKENIZERS_PARALLELISM': 'true', 'NCCL_DEBUG': 'WARN', 'HF_HOME': '/shared/data3/siruo2/hf_checkpoints', 'CUDA_VISIBLE_DEVICES': '4,5,6,7', 'CUDA_LAUNCH_BLOCKING': '1', 'HF_TOKEN': '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'}})
 
     ray.get(main_task.remote(config))
 
