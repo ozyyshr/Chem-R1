@@ -34,10 +34,11 @@ from datasets import Dataset
 import datasets
 import json
 import re
+import selfies as sf
 from sklearn.model_selection import train_test_split
 from datasets import concatenate_datasets
 
-from verl.utils.hdfs_io import copy, makedirs
+#from verl.utils.hdfs_io import copy, makedirs
 import argparse
 
 def extract_answer(text):
@@ -59,14 +60,14 @@ def make_prefix(dp, template_type):
     # NOTE: also need to change reward_score/countdown.py
     if template_type == 'molinstruct':
         question = dp['instruction'] + " " + dp['input']
-        prefix = f"""Answer the given question.\
+        prefix = f"""Answer the given question. \
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
 If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> The Reactant is CCOC(C)=O. </answer>. Question: {question}"""
     elif template_type == 'scibench':
         question = dp['problem_text']
-        prefix = f"""Answer the given question.\
+        prefix = f"""Answer the given question. \
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
@@ -74,7 +75,7 @@ If you find no further external knowledge needed, you can directly provide the a
     elif template_type == 'chembench':
         question = dp['question']
         choices = "\n".join([dp['A'], dp['B'], dp['C'], dp['D']])
-        prefix = f"""Answer the given question.\
+        prefix = f"""Answer the given question. \
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
@@ -82,14 +83,14 @@ If you find no further external knowledge needed, you can directly provide the a
     elif template_type == 'mmlu_chem':
         question = dp['question']
         choices = "\n".join(dp['choices'])
-        prefix = f"""Answer the given question.\
+        prefix = f"""Answer the given question. \
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
 If you find no further external knowledge needed, you can directly provide the answer inside <answer> and </answer>, without detailed illustrations. For example, <answer> +7.3 J </answer>. Question: {question} Choose from the following four options:\n{choices}"""
     elif template_type == 'chemcot':
         question = dp['question']
-        prefix = f"""Answer the given question.\
+        prefix = f"""Answer the given question. \
 You must conduct reasoning inside <think> and </think> first every time you get new information. \
 After reasoning, if you find you lack some knowledge, you can call a search engine by <search> query </search> and it will return the top searched results between <information> and </information>. \
 You can search as many times as your want. \
@@ -98,13 +99,25 @@ If you find no further external knowledge needed, you can directly provide the a
         raise NotImplementedError
     return prefix
 
-def make_map_fn(split):
+def make_map_fn(split, task_name=None):
+    def selfies_to_smiles(selfies):
+        return sf.decoder(selfies)
+    
+    def is_valid_selfies(s):
+        return sf.is_valid_selfies(s)
 
     def process_fn(example, idx):
 
         if split == 'molinstruct':
             if example['input']:
                 example['input'] = example['input'].strip()
+                try:
+                    temp = sf.decoder(example['input'])
+                    if len(temp) > 0:
+                        example['input'] = temp
+                except sf.DecoderError:
+                    pass
+
                 if example['input'][-1] != '?':
                     example['input'] += '?'
         elif split == 'scibench':
@@ -134,6 +147,32 @@ def make_map_fn(split):
             solution = {
                 "target": example['answer_latex'] + " " + example['unit'],
             }
+        elif split == 'molinstruct':
+            if task_name == 'property_prediction' or task_name == 'molecular_description_generation':
+                solution = {
+                    "target": example['output'],
+                }
+            elif task_name == 'true_or_false_question':
+                if example['output'].lower().startswith('yes'):
+                    solution = {
+                        "target": "Yes.",
+                    }
+                else:
+                    solution = {
+                        "target": "No.",
+                    }
+            else:
+                try:
+                    solution = {
+                        "target": selfies_to_smiles(example['output']),
+                    }
+                except Exception as e:
+                    print(f"Error converting selfies to smiles: {e}")
+                    print(f'example: {example["output"]}')
+                    breakpoint()
+                    solution = {
+                        "target": example['output'],
+                    }
         else:
             solution = {
                 "target": example['output'],
@@ -229,6 +268,7 @@ if __name__ == '__main__':
     molinstruct_train_df_list = []
 
     for json_file in json_files:
+        task_name = json_file.split('.')[0]
         file_path = os.path.join(data_folder, json_file)
         with open(file_path, 'r') as f:
             content = json.load(f)
@@ -238,8 +278,9 @@ if __name__ == '__main__':
                 dataset = dataset.shuffle(seed=42).select(range(2000))
 
             # Add unique ID and convert to DataFrame
-            test_dataset = dataset.map(function=make_map_fn("molinstruct"), with_indices=True).remove_columns(dataset.column_names)
+            test_dataset = dataset.map(function=make_map_fn("molinstruct", task_name), with_indices=True).remove_columns(dataset.column_names)
             molinstruct_train_df_list.append(test_dataset)
+            print(f"molinstruct train {task_name}:\n{test_dataset[0]}")
 
     molinstruct_train_df = concatenate_datasets(molinstruct_train_df_list)
     print(f"molinstruct train merged: {len(molinstruct_train_df)}")
@@ -265,6 +306,7 @@ if __name__ == '__main__':
     molinstruct_test_df_list = []
 
     for json_file in json_files:
+        task_name = json_file.split('.')[0]
         file_path = os.path.join(data_folder, json_file)
         with open(file_path, 'r') as f:
             content = json.load(f)
@@ -272,7 +314,7 @@ if __name__ == '__main__':
             dataset = dataset.filter(lambda sample: sample['metadata']['split'] == 'test')
 
             # Add unique ID and convert to DataFrame
-            test_dataset = dataset.map(function=make_map_fn("molinstruct"), with_indices=True).remove_columns(dataset.column_names)
+            test_dataset = dataset.map(function=make_map_fn("molinstruct", task_name), with_indices=True).remove_columns(dataset.column_names)
             molinstruct_test_df_list.append(test_dataset)
 
     # Merge all test DataFrames from molinstruct
