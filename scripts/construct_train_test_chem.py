@@ -239,8 +239,9 @@ if __name__ == '__main__':
     print("### Constructing dataset for ChemBench ###")
     chembench_dataset = datasets.load_dataset('AI4Chem/ChemBench4K')
     dataset = chembench_dataset['test']
+    dataset = dataset.shuffle(seed=42).select(range(1000)) # randomly sample 1000 data items
     chembench_set = dataset.map(function=make_map_fn('chembench'), with_indices=True).remove_columns(dataset.column_names)
-    print("len of processed chemcot:", len(chembench_set)) # 4009
+    print("len of processed chemcot:", len(chembench_set)) # 1000
     print("*"*50)
     print("demonstration of the first data item:")
     print(chembench_set[0])
