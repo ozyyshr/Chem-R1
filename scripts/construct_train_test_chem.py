@@ -177,23 +177,40 @@ def make_map_fn(split, task_name=None):
             solution = {
                 "target": example['output'],
             }
-
-        data = {
-            "data_source": split,
-            "prompt": [{
-                "role": "user",
-                "content": question,
-            }],
-            "ability": "chemistry-reasoning",
-            "reward_model": {
-                "style": "rule",
-                "ground_truth": str(solution)
-            },
-            "extra_info": {
-                'split': split,
-                'index': idx,
+        if task_name is not None:
+            data = {
+                "data_source": f"{split}_{task_name}",
+                "prompt": [{
+                    "role": "user",
+                    "content": question,
+                }],
+                "ability": "chemistry-reasoning",
+                "reward_model": {
+                    "style": "rule",
+                    "ground_truth": str(solution)
+                },
+                "extra_info": {
+                    'split': split,
+                    'index': idx,
+                }
             }
-        }
+        else:
+            data = {
+                "data_source": split,
+                "prompt": [{
+                    "role": "user",
+                    "content": question,
+                }],
+                "ability": "chemistry-reasoning",
+                "reward_model": {
+                    "style": "rule",
+                    "ground_truth": str(solution)
+                },
+                "extra_info": {
+                    'split': split,
+                    'index': idx,
+                }
+            }
         return data
 
     return process_fn
@@ -222,19 +239,29 @@ if __name__ == '__main__':
     print(scibench_set.shape)
     
 
-    print("### Constructing dataset for ChemCot ###")
-    chemcot_dataset = datasets.load_dataset('RUC-AIBOX/long_form_thought_data_5k')
-    dataset = chemcot_dataset['train']
-    scibench_classes = ["chemistry", "biology"]
-    # filter dataset to only include classes in scibench_classes
-    dataset = dataset.filter(lambda x: x['domain'] in scibench_classes)
-    print("len of chemcot:", len(dataset))
-    chemcot_set = dataset.map(function=make_map_fn('chemcot'), with_indices=True).remove_columns(dataset.column_names)
-    print("len of processed chemcot:", len(chemcot_set)) # 385
+    # print("### Constructing dataset for ChemCot ###")
+    # chemcot_dataset = datasets.load_dataset('RUC-AIBOX/long_form_thought_data_5k')
+    # dataset = chemcot_dataset['train']
+    # scibench_classes = ["chemistry", "biology"]
+    # # filter dataset to only include classes in scibench_classes
+    # dataset = dataset.filter(lambda x: x['domain'] in scibench_classes)
+    # print("len of chemcot:", len(dataset))
+    # chemcot_set = dataset.map(function=make_map_fn('chemcot'), with_indices=True).remove_columns(dataset.column_names)
+    # print("len of processed chemcot:", len(chemcot_set)) # 385
+    # print("*"*50)
+    # print("demonstration of the first data item:")
+    # print(chemcot_set[0])
+    # print(chemcot_set.shape)
+
+    print("### Constructing dataset for ChemBench Train ###")
+    chembench_dataset = datasets.load_dataset('AI4Chem/ChemBench4K')
+    dataset = chembench_dataset['validation']
+    chembench_train = dataset.map(function=make_map_fn('chembench'), with_indices=True).remove_columns(dataset.column_names)
+    print("len of processed chemcot:", len(chembench_train)) # 1000
     print("*"*50)
     print("demonstration of the first data item:")
-    print(chemcot_set[0])
-    print(chemcot_set.shape)
+    print(chembench_train[0])
+    print(chembench_train.shape)
 
     print("### Constructing dataset for ChemBench ###")
     chembench_dataset = datasets.load_dataset('AI4Chem/ChemBench4K')
@@ -259,7 +286,8 @@ if __name__ == '__main__':
     print(mmluchem.shape)
 
     # 1. Merge chemistry_reasoning files
-    chemistry_df = concatenate_datasets([mmluchem, chemcot_set, scibench_set])
+    #chemistry_df = concatenate_datasets([mmluchem, chemcot_set, scibench_set])
+    chemistry_df = concatenate_datasets([mmluchem, scibench_set])
     print(f"chemistry_reasoning merged: {len(chemistry_df)}")
 
     print("### Constructing dataset for Mol-Instruct ###")
@@ -296,7 +324,7 @@ if __name__ == '__main__':
     print(f"chemistry_reasoning split into training: {len(chem_reasoning_train)}, testing: {len(chem_reasoning_test)}")
 
     # 3. Merge molinstruct training with chemistry_reasoning training
-    final_train_hf = concatenate_datasets([molinstruct_train_df, chem_reasoning_train])
+    final_train_hf = concatenate_datasets([molinstruct_train_df, chem_reasoning_train, chembench_train])
     final_train_hf.to_parquet(os.path.join(args.local_dir, 'train.parquet'))
     print(f"final training merged: {len(final_train_hf)}")
 
